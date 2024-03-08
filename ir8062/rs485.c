@@ -168,7 +168,6 @@ int rs485_read(char *rx, size_t size) {
 	return read(rs485_fd,rx,size); // return read length
 }
 
-#if 1
 int rs485_init() {
 	rs485_fd = open_port(RS485_DEV);
 	if (rs485_fd < 0) {
@@ -176,38 +175,3 @@ int rs485_init() {
 	}
 	return rs485_fd;
 }
-#else // for loop back test
-/**
-*@breif 	main()
-*/
-char buff[256];
-int main(int argc, char **argv)
-{
-	char dev[10]="/dev/ttyS8";
-	rs485_fd = open_port(dev);
-
-	int rx_size,i;
-	while (1) {
-		write(rs485_fd,RS485_DO1_OFF,sizeof(RS485_DO1_OFF));
-		rx_size = read(rs485_fd,buff,sizeof(buff));
-		if (rx_size) {
-			if (memcmp(buff,RS485_DO1_OFF,sizeof(RS485_DO1_OFF)-1) == 0)
-				break;
-			else {
-				printf("RX size=%d...\n", rx_size);
-				for ( i=0; i<rx_size; i++) {
-					printf("0x%x, ",buff[i]);
-				}
-				printf("\n");
-			}
-		}
-		else {
-			printf("No data input \n");
-		}
-		sleep(1);
-	}
-	printf("RS485 test stop\n");
-
-  return 0;
-}
-#endif

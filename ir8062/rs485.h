@@ -16,5 +16,4 @@ typedef struct {
 int rs485_init();
 void rs485_send(char *tx, size_t size);
 int rs485_read(char *rx, size_t size);
-void rs485_ack();
 #endif
