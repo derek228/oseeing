@@ -13,10 +13,10 @@
 
 #define INI_CONFIG_DIO_CMD
 #ifndef INI_CONFIG_DIO_CMD
-char RS485_DO1_OFF[8]={0x01,0x05,0x00,0x00,0x00,0x00,0xCD,0xCA};
 char RS485_DO1_ON[8]={0x01,0x05,0x00,0x00,0xFF,0x00,0x8C,0x3A};
-char RS485_DO2_OFF[8]={0x01,0x05,0x00,0x01,0x00,0x00,0x9C,0x0A};
+char RS485_DO1_OFF[8]={0x01,0x05,0x00,0x00,0x00,0x00,0xCD,0xCA};
 char RS485_DO2_ON[8]={0x01,0x05,0x00,0x01,0xFF,0x00,0xDD,0xFA};
+char RS485_DO2_OFF[8]={0x01,0x05,0x00,0x01,0x00,0x00,0x9C,0x0A};
 #endif
 static int alarm_debug=0;
 
@@ -74,6 +74,10 @@ static int rs485_ack_pass(char *cmd) {
   int len=0;
   int retry=10;
   char rx[8]={0};
+  if (cmd == NULL) {
+    printf("ERROR : RS485 Command is NULL, skip ACK check\n");
+    return 0;
+  }
   while(retry) {
     len = rs485_read(rx,8);
     if ( (memcmp(rx,cmd,8)!=0) ) {
@@ -87,7 +91,7 @@ static int rs485_ack_pass(char *cmd) {
     return 1; //fail
   }
   else {
-    printf("Get RS485 Command ACK, retry =%d\n",retry);
+    //printf("Get RS485 Command ACK, retry =%d\n",retry);
     return 0; //pass
   }
 }
@@ -143,7 +147,7 @@ static void set_alarm_dio(int level) {
       }
       else {
         lv2=0;
-        printf("DO2 Off : level=%d, lv1=%d, lv2=%d\n",level, lv1,lv2);
+        //printf("DO2 Off : level=%d, lv1=%d, lv2=%d\n",level, lv1,lv2);
       }
     }
 #ifdef INI_CONFIG_DIO_CMD

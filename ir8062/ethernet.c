@@ -28,7 +28,7 @@ int check_ip() {
     char ipaddr[16]={0};
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Socket creation error");
-        return EXIT_FAILURE;
+        return 0;
     }
 
     memset(&ifr, 0, sizeof(struct ifreq));
@@ -37,7 +37,7 @@ int check_ip() {
     if (ioctl(sockfd, SIOCGIFADDR, &ifr) < 0) {
         perror("IOCTL error");
         close(sockfd);
-        return EXIT_FAILURE;
+        return 0;
     }
 
     sin = (struct sockaddr_in *)&ifr.ifr_addr;
@@ -64,19 +64,19 @@ int is_connected(char *url) {
             // 将找到的部分复制到提取的 URL 中
             strncpy(dns, ptr_start, ptr_end - ptr_start);
             dns[ptr_end - ptr_start] = '\0'; // 添加字符串结束符
-            printf("Extracted URL: %s\n", dns);
+            //printf("Extracted URL: %s\n", dns);
         }
     }
 
     // 构造ping命令
     sprintf(command, "ping -c 1 %s > /dev/null 2>&1", dns);
-    printf("command = %s\n", command);
+    //printf("command = %s\n", command);
     // 执行ping命令并获取输出
     if (system(command) == 0) {
-        printf("Ping successful!\n");
+        //printf("Ping successful!\n");
         return 0;
     } else {
-        printf("Ping failed!\n");
+        //printf("Ping failed!\n");
         return -1;
     }
 
@@ -123,8 +123,11 @@ int ethernet_init() {
 	switch (get_ini_conn_type()) 
 	{
 	case RJ45:
-		if (check_ip()==1)
+		if (check_ip()==1) {
+			printf("ETH connetced\n");
 			return 0;
+		}
+		printf("Start DHCP \n");
 		if (system("udhcpc -n")) {
 			return -1;
 		}

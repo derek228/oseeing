@@ -315,22 +315,22 @@ unsigned char get_rs485_cmd_len() {
 char *dio_command_get(char fun) {
 	switch (fun) {
 	case DO1_ON:
-		printf("DO1 ON command pointer\n");
+		//printf("DO1 ON command pointer\n");
 		if (do1_on != NULL)
 			return do1_on;
 		else return NULL;
 	case DO2_ON:
-		printf("DO2 ON command pointer\n");
+		//printf("DO2 ON command pointer\n");
 		if (do2_on != NULL)
 			return do2_on;
 		else return NULL;
 	case DO1_OFF:
-		printf("DO1 OFF command pointer\n");
+		//printf("DO1 OFF command pointer\n");
 		if (do1_off != NULL)
 			return do1_off;
 		else return NULL;
 	case DO2_OFF:
-		printf("DO2 OFF command pointer\n");
+		//printf("DO2 OFF command pointer\n");
 		if (do2_off != NULL)
 			return do2_off;
 		else return NULL;

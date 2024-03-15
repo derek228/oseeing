@@ -78,7 +78,7 @@ void *curl_thread(void *arg) {
             curl = curl_easy_init();
         }
     	cnt++;
-		printf("GET mq data(%d) =%s, post data length=%d\n",cnt, msg.data, strlen(out));
+		//printf("GET mq data(%d) =%s, post data length=%d\n",cnt, msg.data, strlen(out));
         //if (cnt>=97) {
         //printf("JSON(%d):\n%s\n",strlen(out),out);
         //}

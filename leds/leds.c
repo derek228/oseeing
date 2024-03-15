@@ -243,7 +243,7 @@ static int leds_init() {
 				gpio_led_init(led_t[i].id, 1);
 			else 
 				gpio_led_init(led_t[i].id, 0);
-			printf("GPIO LED%d init: blanking=%d, freq=%d, gpio=%d, inverse=%d, toggle_cnt=%d\n",i,led_t[i].led_blanking, led_t[i].led_freq, led_t[i].id, led_t[i].inverse, led_t[i].breath_delay);
+			logd(leds_debug,"GPIO LED%d init: blanking=%d, freq=%d, gpio=%d, inverse=%d, toggle_cnt=%d\n",i,led_t[i].led_blanking, led_t[i].led_freq, led_t[i].id, led_t[i].inverse, led_t[i].breath_delay);
 		}
 		else  {
 			led_t[i].type=led_config_table[i] & PWM_LED_TYPE;
@@ -257,8 +257,8 @@ static int leds_init() {
 				pwm_set_period(i);
 			}
 			else 
-				printf("PWM LED %d init failed\n", i);
-			printf("PWM LED%d init: blanking=%d, freq=%d, gpio=%d\n",i,led_t[i].led_blanking, led_t[i].led_freq, led_t[i].id);
+				printf("ERROR PWM LED %d init failed\n", i);
+			logd(leds_debug,"PWM LED%d init: blanking=%d, freq=%d, gpio=%d\n",i,led_t[i].led_blanking, led_t[i].led_freq, led_t[i].id);
 			// set breathing params
 			set_breathing_params();
 		}
@@ -282,7 +282,7 @@ static int pwm_enable(int id, int en) {
 	else
 		fprintf(fpwm, "%d", 0);
 	fclose(fpwm);
-	printf("PWM%d %s done\n",id, en ? "enable":"disable");
+	logd(leds_debug,"PWM%d %s done\n",id, en ? "enable":"disable");
 	return 0;
 }
 
@@ -535,7 +535,7 @@ void *receiveMessage(void *arg) {
 	blanking : blanking frequency 
 */
 void led_set(int id, int en, int breathing, int blanking) {
-	printf("Set LED%d, en=%d, breathing=%d, blanking=%d\n", id, en, breathing, blanking);
+	logd(leds_debug,"Set LED%d, en=%d, breathing=%d, blanking=%d\n", id, en, breathing, blanking);
 	if (led_t[id].type & GPIO_LED_TYPE) { // gpio led
 		led_t[id].led_en = en;
 		if (blanking) {

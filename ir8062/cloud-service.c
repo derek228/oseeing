@@ -18,7 +18,6 @@
 #include "mi48.h"
 #define IGREENT_CLOUD 1
 
-
 #ifdef IGREENT_CLOUD
 	#include "cloud/igreent.c"
 #else // run igreent cloud as default

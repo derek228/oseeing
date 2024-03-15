@@ -161,6 +161,10 @@ static int open_port(const char *portname)
 int rs485_fd;
 
 void rs485_send(char *tx, size_t size) {
+	if (tx == NULL) {
+		printf("ERROR : RS485 Command is NULL\n");
+		return;
+	}
 	write(rs485_fd, tx, size);
 }
 
