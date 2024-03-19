@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <jpeglib.h>
+#include <string.h>
+#include <unistd.h>
 #include <time.h>
 #include "jpegenc.h"
 #define WIDTH 80
@@ -13,7 +15,7 @@
 typedef struct {
     unsigned char r, g, b;
 } RGBColor;
-
+#define WARTERMARK  1
 #define colormapCount 6
 #define color565(r, g, b) (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3))
 #define OUTPUT_PREFIX "/usr/local/sbin/www/images/"
@@ -44,7 +46,191 @@ static const unsigned short int r[colormapCount][256]={
 {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,14,16,17,18,19,20,21,22,22,24,25,26,26,28,29,29,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,45,46,48,49,50,51,52,52,53,55,56,57,58,59,59,60,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,84,86,86,88,89,90,91,91,93,93,95,96,97,98,98,100,100,102,103,104,105,105,107,107,109,110,111,112,112,114,114,116,117,118,119,119,121,121,123,124,125,126,126,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,164,166,167,168,169,169,171,172,173,173,174,176,177,178,178,180,181,182,183,183,185,186,187,187,188,190,191,192,192,194,195,196,197,197,199,200,201,201,202,204,205,206,206,208,209,210,210,211,213,214,215,215,216,218,219,220,220,222,223,224,224,225,227,228,229,229,230,232,233,234,234,236,237,238,238,239,241,242,243,243,244,246,247,248,248,250,251,252,252,253,255}
 };
 
+#ifdef WARTERMARK
+#define XLEN 5
+#define YLEN 7
+static unsigned short int digi_0[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1}
+};
+
+static unsigned short int digi_1[YLEN][XLEN]={
+    {0,0,1,0,0},
+    {0,0,1,0,0},
+    {0,0,1,0,0},
+    {0,0,1,0,0},
+    {0,0,1,0,0},
+    {0,0,1,0,0},
+    {0,1,1,1,0}
+};
+static unsigned short int digi_2[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {1,1,1,1,1},
+    {1,0,0,0,0},
+    {1,0,0,0,0},
+    {1,1,1,1,1}
+};
+static unsigned short int digi_3[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {1,1,1,1,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {1,1,1,1,1}
+};
+static unsigned short int digi_4[YLEN][XLEN]={
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1}
+};
+static unsigned short int digi_5[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {1,0,0,0,0},
+    {1,0,0,0,0},
+    {1,1,1,1,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {1,1,1,1,1}
+};
+static unsigned short int digi_6[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {1,0,0,0,0},
+    {1,0,0,0,0},
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1}
+};
+static unsigned short int digi_7[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1}
+};
+static unsigned short int digi_8[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1}
+};
+static unsigned short int digi_9[YLEN][XLEN]={
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1},
+    {0,0,0,0,1},
+    {0,0,0,0,1},
+    {0,1,1,1,1}
+};
+static unsigned short int wartermark[7][20]={0};
+static void create_digi_matrix(char x, char y, unsigned int val) {
+    unsigned short int digi_index[7][5]={0};
+    int i,j;
+    //printf ("create digi %d\n", val);
+    switch (val) {
+    case 0:
+        memcpy(digi_index, digi_0, sizeof(digi_0));
+        break;
+    case 1:
+        memcpy(digi_index, digi_1, sizeof(digi_1));
+        break;
+    case 2:
+        memcpy(digi_index, digi_2, sizeof(digi_2));
+        break;
+    case 3:
+        memcpy(digi_index, digi_3, sizeof(digi_3));
+        break;
+    case 4:
+        memcpy(digi_index, digi_4, sizeof(digi_4));
+        break;
+    case 5:
+        memcpy(digi_index, digi_5, sizeof(digi_5));
+        break;
+    case 6:
+        memcpy(digi_index, digi_6, sizeof(digi_6));
+        break;
+    case 7:
+        memcpy(digi_index, digi_7, sizeof(digi_7));
+        break;
+    case 8:
+        memcpy(digi_index, digi_8, sizeof(digi_8));
+        break;
+    case 9:
+        memcpy(digi_index, digi_9, sizeof(digi_9));
+        break;
+    default:
+        break;
+    }
+    for (i=0;i<7;i++) {
+        for (j=0;j<5;j++) {
+            wartermark[i+y][j+x]=digi_index[i][j];
+        }
+    }
+}
+static void create_wartermark_matrix(unsigned int val) {
+    unsigned int maxt = (val-2735)/10;
+    unsigned int digi = 0;
+    memset(wartermark,0,sizeof(wartermark));
+    //printf("max temperature = %d\n",maxt);
+    digi = maxt/100;
+    create_digi_matrix(1,0,digi);
+    if (digi) {
+        digi = (maxt-100)/10;
+        create_digi_matrix(8,0,digi);
+        digi = (maxt-100)%10;
+        create_digi_matrix(15,0,digi);
+    }
+    else {
+        digi = maxt/10;
+        create_digi_matrix(8,0,digi);
+        digi = (maxt%10);
+        create_digi_matrix(15,0,digi);
+    }
+}
+static unsigned short int get_wartermark_matrix(unsigned short int offset_y, unsigned short int y,unsigned short int x) {
+
+    if (y < offset_y) { // ((y-offset_y) >= 7) {
+        return 0;
+    }
+    else if ((y-offset_y) >= 7)
+        return 0;
+    else if (x>=20) 
+        return 0;
+    else 
+        return wartermark[y-offset_y][x];
+}
+
+static void print_wartermark() {
+    int i,j;
+    for (i=0;i<7;i++) {
+        for (j=0;j<20;j++) 
+            printf("%d",wartermark[i][j]);
+        printf("\n");
+    }
+}
+
+#endif
+
 static clock_t start=0;
+
 
 void WriteBMP(char*img,const char* filename)
 {
@@ -124,6 +310,7 @@ int jpegenc(char *img, unsigned int max, unsigned int min) {
 		return 1;
 	    }
 
+    create_wartermark_matrix(max);
 	// 初始化JPEG压缩对象
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
@@ -146,15 +333,26 @@ int jpegenc(char *img, unsigned int max, unsigned int min) {
 	JSAMPLE *row = malloc(3 * WIDTH * sizeof(JSAMPLE));
 	for (i=0; i<62; i++) {
 		for (j=0;j<80;j++) {
-			temp = (img[i*80*2+j*2] << 8) | img[i*80*2+j*2+1];
-			//temp = ( temperature_1b[i*80*2+j*2] << 8) + temperature_1b[i*80*2+1+j*2];
-			RGBColor color = temperature2jpg(temp,0,max,min);
-			//RGBColor color = temperature_to_color(temp, max, min);
-			row[j * 3] = color.r;
-			row[j * 3 + 1] = color.g;
-			row[j * 3 + 2] = color.b;
-	        }
-	        jpeg_write_scanlines(&cinfo, &row, 1);
+            #ifdef WARTERMARK
+            if (get_wartermark_matrix(1,i,j)) {
+
+                row[j * 3] = 255;
+                row[j * 3 + 1] = 255;
+                row[j * 3 + 2] = 255;
+            }
+            else 
+            #endif
+            {
+    			temp = (img[i*80*2+j*2] << 8) | img[i*80*2+j*2+1];
+                //temp = ( temperature_1b[i*80*2+j*2] << 8) + temperature_1b[i*80*2+1+j*2];
+                RGBColor color = temperature2jpg(temp,0,max,min);
+                //RGBColor color = temperature_to_color(temp, max, min);
+                row[j * 3] = color.r;
+                row[j * 3 + 1] = color.g;
+                row[j * 3 + 2] = color.b;
+            }
+        }
+        jpeg_write_scanlines(&cinfo, &row, 1);
 	}
     // 压缩结束
 	jpeg_finish_compress(&cinfo);
