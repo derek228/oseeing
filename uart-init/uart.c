@@ -14,12 +14,14 @@
 #include <linux/reboot.h>
 #include <signal.h>
 #include <dirent.h>
+#include <errno.h>
 
 #define PORT 8003 // 8080
-#define IMG_BUFFER_SIZE 10240 // 102400 // 1048576 // 1MB
+#define IMG_BUFFER_SIZE  1024 // 102400 // 1048576 // 1MB
 #define UPDATE_IMG "/image"
 #define IMG_UPDATE_CMD "IR8062UPDATE"
 #define IMG_DOWNLOAD_FINISH "IR8062IMGDOWNLOADED"
+#define UPDATING_ACK "IR8062SYSTEMUPDATING\n"
 #define REBOOT_ACK "IR8062SYSTEMREBOOT\n"
 #define FILENAME "/mnt/mtdblock1/ir8062.ini"
 #define BUFFER_SIZE 1024
@@ -159,6 +161,15 @@ static int upgrade_fail() {
 	sendcmd(UPDATE_FAIL_ACK,0);
 	system("reboot -f");
 }
+static int upgrading() {
+	printf("Start Firmware upgrade...\n");
+	sleep(1);
+	sendcmd(UPDATING_ACK,0);
+	sleep(1);
+	sendcmd(UPDATING_ACK,0);
+	sleep(1);
+	sendcmd(UPDATING_ACK,0);
+}
 static int upgrade_finish() {
 	printf("Firmware upgrade finish...\n");
 	sleep(1);
@@ -225,7 +236,12 @@ static int download() {
 			printf("Host disconnect socket ...\n");
 			break;
 		} else if (valread == -1) {
-			perror("recv");
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				printf("recv : timeout, try again\n");
+				continue;			
+			}
+			else
+				perror("recv");
 			break;
 		} else {
 			fwrite(buffer, 1, valread, received_file);
@@ -402,6 +418,7 @@ int main() {
 			break;
 
 		case SYSTEM_UPDATE_FINISH:
+			upgrading();
 			printf("Start upgrade process\n");
 			system("/fwupdate -p /image -w kernel");
 			printf("Update system finished, rebooting....\n");

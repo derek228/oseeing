@@ -7,12 +7,22 @@ from tkinter import messagebox
 import socket
 import time
 import os
+from tkinter import filedialog
+
+def connection_error_dialog():
+    messagebox.showerror("Error", "Network connection error!\nRestart your device and try again")
+
+def upgrade_error_dialog():
+    messagebox.showerror("Error", "Device firmware upgrade failed!\nRestart your devcie and try again")
+def upgrade_finish():
+    messagebox.showerror("Done", "Device firmware upgrade finished!")
 
 def download_start():
-    BUFFER_SIZE =  10240 #1048576; # 1MByte
+    global file_path
+    BUFFER_SIZE =  1024 #1048576; # 1MByte
     #ipaddr = '192.168.100.35'
     port = 8003 #8080
-    img_file = "uImage"
+    img_file = file_path #"uImage"
     # Get upload file size
     file_size = os.path.getsize(img_file) 
     bytes_sent = 0
@@ -26,6 +36,7 @@ def download_start():
             s.connect((ip_result.strip(), port))
         except Exception as e:
             print(f"An error occurred(socket connect):\n {e}")
+            connection_error_dialog()
             return
 
         # open upload file
@@ -40,17 +51,22 @@ def download_start():
                     root.update()
                     print(f"progress= {progress}%  SendByte={bytes_sent}")
                     data = file.read(BUFFER_SIZE)
+                    #time.sleep(1)
                 except socket.error as e:
                     print(f"Socket error occurred: {e}")
+                    connection_error_dialog()
                     return
                 except socket.timeout as e:
                     print(f"Socket timeout occurred: {e}")
+                    connection_error_dialog()
                     return
                 except ConnectionResetError as e:
                     print(f"Connection reset error occurred: {e}")
+                    connection_error_dialog()
                     return
                 except Exception as e:
                     print(f"An error occurred: {e}")
+                    connection_error_dialog()
                     return
         print("File sent successfully.")
         download_button.grid_forget()
@@ -61,20 +77,52 @@ def download_start():
     ser.reset_output_buffer()
     ser.write(b'IR8062IMGDOWNLOADED\n')
     time.sleep(3)
+    cnt = 0
+    state = 0 # download process, 0:stop 1:start
     while file_size > 0:
         data = ser.readline().decode('utf-8')
-        if "IR8062SYSTEMREBOOT" in data :
-            file_size=0;
-        elif "IR8062UPDATEFAILE" in data :
+#        if "IR8062SYSTEMREBOOT" in data :
+#            file_size=0
+        if "IR8062UPDATEFAILE" in data :
             print("Error : device upgrade fail, reboot and try again")
+            upgrade_error_dialog()
             ser.close()
             return
+        elif "IR8062SYSTEMUPDATING" in data :
+            print("Start firmware upgrade process")
+            state = 1
+            file_size = 0
+            break
         else :
             print(f"wrong reboot cmd = {data}")
-        ser.write(b'IR8062IMGDOWNLOADED\n')
+            ser.write(b'IR8062IMGDOWNLOADED\n')
+
+        '''
+        cnt +=1
+        if cnt > 10 :
+            print("Error : device upgrade fail, reboot and try again")
+            upgrade_error_dialog()
+            ser.close()
+            return
+        '''
         time.sleep(0.5)
+    while state == 1 :
+        data = ser.readline().decode('utf-8')
+        if "IR8062SYSTEMREBOOT" in data :
+            print("Firmware upgrade compleate")
+            state = 2
+        else :
+            print(f"Upgrade firmware ... : {cnt}")
+            upgrade_label.config(text=f"Firmware Upgrade... : {cnt}")
+            root.update()
+        cnt += 1
+        time.sleep(1)
+
     ser.close()
+    upgrade_label.config(text=f"Firmware Upgrade... : Finished")
+    root.update()
     print("IR8062 system rebooting")
+    return
     
 
 def connect_device():
@@ -92,6 +140,7 @@ def connect_device():
         ser.write(upgrade_cmd)
         # get mac and ip
         strtmp=data.decode('utf-8')
+
         if 'IR8062_BROADCASTING' in strtmp :
             state=1 # check connect ack
         print(strtmp)
@@ -141,6 +190,13 @@ def select_port(selected_port):
     eth.set_serial(selected_port)
     com_port_label.config(text=f"COM port device : {selected_port}")
     print(f"Selece COM port: {selected_port}")
+def open_file():
+    global file_path
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        print("Selected file:", file_path)
+        file_label.config(text=f"File : {file_path}")
+
 
 '''
 def rj45_alarm_on_click():
@@ -161,9 +217,10 @@ rs485=ir8062_config.RS485CommandConfig()
 serial_ports = scan_serial_ports()
 global mac_result
 global ip_reslut 
+global file_path
 ip_result= "None"
 mac_result = "None"
-
+file_path = "None"
 print(serial_ports)
 root = tk.Tk()
 root.title("Settings")
@@ -180,7 +237,13 @@ menu.add_cascade(label="Select Serial Ports Device Name.....", menu=serial_menu)
 root.config(menu=menu)
  
 com_port_label = tk.Label(root, text="COM Port:")
-com_port_label.grid(row=0,column=0,sticky=tk.W)
+com_port_label.grid(row=0,column=0,sticky=tk.W,padx=20)
+file_button = tk.Button(root, text="Open File", command=open_file)
+file_button.grid(row=1, column=0,sticky=tk.W,padx=20)
+file_label = tk.Label(root, text=f"File:{file_path}")
+file_label.grid(row=3,column=0,sticky=tk.W,padx=20)
+
+#file_button.pack()
 '''
 # alarm for RJ45
 rj45_alarm_label = tk.Label(root, text="RJ45 Alarm:")
@@ -199,18 +262,21 @@ rj45_over_temperature_entry = tk.Entry(root)
 rj45_over_temperature_entry.grid(row=4,column=1)
 rj45_over_temperature_entry.bind("<FocusOut>", over_temperature_on_leave)
 '''
+cnt=0
 connect_button = tk.Button(root, text="Connect Device", command=connect_device)
-connect_button.grid(row=15,column=0)
+connect_button.grid(row=15,column=0,sticky=tk.W,padx=20)
 download_button = tk.Button(root, text="Download", command=download_start)
 download_button.grid(row=15,column=1)
 download_button.grid_forget()
 mac_label = tk.Label(root, text=f"MAC:{mac_result}")
-mac_label.grid(row=16,column=0)
+mac_label.grid(row=16,column=0,sticky=tk.W,padx=20)
 ip_label = tk.Label(root, text=f"IP:{ip_result}")
-ip_label.grid(row=17,column=0)
+ip_label.grid(row=17,column=0,sticky=tk.W,padx=20)
 progress_bar = ttk.Progressbar(root, mode="determinate", length=200)
 progress_bar["value"]=0
-progress_bar.grid(row=18, column=0, columnspan=2, pady=10)
+progress_bar.grid(row=18, column=0,sticky=tk.W,padx=20)
+upgrade_label = tk.Label(root, text=f"Upgrade firmware... : {cnt}")
+upgrade_label.grid(row=19,column=0,sticky=tk.W,padx=20)
 
 root.mainloop()
 
