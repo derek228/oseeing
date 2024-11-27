@@ -50,6 +50,7 @@ static int factory_test() {
 }
 static void monitor_temperature() {
 	// INI file configuartion parse.
+	static uint8_t conn_state=0;
 	while (parse_ini_file(INI_FILENAME)<0) {
 		printf("ERROR : Can't open %s file\n",INI_FILENAME);
 		sleep(1);
@@ -61,12 +62,20 @@ static void monitor_temperature() {
 	}
 	// Check dhcp if support ethernet
 	eth_mac_config();
+#if 1 
+	if (ethernet_init() < 0) 
+		conn_state=0;
+	else
+		conn_state=1;
+#else	
 	while (ethernet_init() < 0) {
 		printf("ERROR : DHCP IP address not found\n");
 		sleep(1);
 	}
-	if (get_ini_conn_type() == RJ45) {
-		cloud_service_init();
+#endif
+	if ((get_ini_conn_type() == RJ45) && conn_state) {
+		if (cloud_service_init() < 0)
+			conn_state = 0;
 	}
 	// start system LEDs control
 	led_msg_init();
@@ -78,7 +87,8 @@ static void monitor_temperature() {
 			led_heartbit();
 			jpegenc(mi48_get_data(),mi48_get_max_temperature(), mi48_get_min_temperature());
 			temperature_alarm(mi48_get_data(),mi48_get_max_temperature(), mi48_get_min_temperature() );
-			run_cloud_service();
+			if (conn_state)
+				run_cloud_service();
 		}
 	}
 }

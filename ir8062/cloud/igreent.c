@@ -76,8 +76,10 @@ static size_t exec_q_ir_gateway_cb(void *data, size_t size, size_t nmemb, void *
 	mem->size += realsize;
 	mem->response[mem->size] = 0;
 	printf("response:\n%s\nEnd\n",mem->response);
-	if (cJSONParserID(mem->response)<0)
+	if (cJSONParserID(mem->response)<0) {
+		printf("ERROR : Can't register iGreent Cloud service\n");
 		register_status=IGREENT_REGISTER_FAIL;
+	}
 	else
 		register_status=IGREENT_REGISTER_SUCCESS;
 	return realsize;
@@ -89,12 +91,17 @@ static size_t exec_q_ir_gateway_cb(void *data, size_t size, size_t nmemb, void *
 static int http_exec_q_ir_gateway() { 
 	CURL *curl;
 	CURLcode res;
+/*	if (is_connected("http://demo.igreent.com") < 0) {
+		register_status=IGREENT_REGISTER_FAIL;
+		printf("No internet service, can't connect to iGreent cloud\n");
+		return -1;
+	}*/
 	curl = curl_easy_init();
 	if(curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, igreent_ir_gateway_url_prefix);
 		/* send all data to this function  */
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, exec_q_ir_gateway_cb);
- 
+		curl_easy_setopt(curl,CURLOPT_TIMEOUT, 10L);
 		/* we pass our 'chunk' struct to the callback function */
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
  
@@ -102,10 +109,12 @@ static int http_exec_q_ir_gateway() {
     	res = curl_easy_perform(curl);
     	/* Check for errors */
     	if(res != CURLE_OK) {
-      		fprintf(stderr, "curl_easy_perform() failed: %s\n",curl_easy_strerror(res));
+			register_status=IGREENT_REGISTER_FAIL;
+      		printf("curl_easy_perform() iGreent register failed: %s\n",curl_easy_strerror(res));
       		return -1;
     	}
- 
+		else
+			register_status=IGREENT_REGISTER_SUCCESS;
     	/* remember to free the buffer */
 		free(chunk.response);
 		/* always cleanup */
@@ -183,12 +192,15 @@ int cloud_service_init()
 	len=strlen(igreent_ir_gateway_url_prefix);
 	igreent_ir_gateway_url_prefix[len]='\0';
 	printf("URL = %s len=%d\n", igreent_ir_gateway_url_prefix,len);
-	http_exec_q_ir_gateway();
+	if (http_exec_q_ir_gateway()<0)
+		return -1;
+	#if 0
 	while (register_status != IGREENT_REGISTER_SUCCESS) {
 		printf("Wait iGreent cloud register device ID\n");
 		sleep(1);
 		http_exec_q_ir_gateway();
 	}
+	#endif
 	while (curl_thread_create()<0) {
 		printf("ERROR : curl therad create failed\n");
 		sleep(1);
@@ -197,6 +209,11 @@ int cloud_service_init()
 }
 
 void run_cloud_service() {
+	if (register_status == IGREENT_REGISTER_FAIL) {
+		printf("Try to register iGreent service\n");
+		if (http_exec_q_ir_gateway()<0)
+			return;
+	}
 	switch (get_ini_post_type()) {
 	case POST_FULL_DATA:
 		full_data_post();
