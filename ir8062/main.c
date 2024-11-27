@@ -18,7 +18,7 @@
 #include "ethernet.h"
 #include "mi48.h"
 
-#define FW_VERSION	"1.00.04"
+#define FW_VERSION	"1.00.05"
 static void parse_opts(int argc, char *argv[])
 {
 	char *macno;
@@ -60,23 +60,6 @@ static void monitor_temperature() {
 		printf("ERROR : Can't open RS485 port\n");
 		sleep(1);
 	}
-	// Check dhcp if support ethernet
-	eth_mac_config();
-#if 1 
-	if (ethernet_init() < 0) 
-		conn_state=0;
-	else
-		conn_state=1;
-#else	
-	while (ethernet_init() < 0) {
-		printf("ERROR : DHCP IP address not found\n");
-		sleep(1);
-	}
-#endif
-	if ((get_ini_conn_type() == RJ45) && conn_state) {
-		if (cloud_service_init() < 0)
-			conn_state = 0;
-	}
 	// start system LEDs control
 	led_msg_init();
 	printf("Post MAC address = %s\n", eth_get_mac());
@@ -87,8 +70,7 @@ static void monitor_temperature() {
 			led_heartbit();
 			jpegenc(mi48_get_data(),mi48_get_max_temperature(), mi48_get_min_temperature());
 			temperature_alarm(mi48_get_data(),mi48_get_max_temperature(), mi48_get_min_temperature() );
-			if (conn_state)
-				run_cloud_service();
+			run_cloud_service();
 		}
 	}
 }
@@ -100,8 +82,8 @@ int main(int argc, char *argv[]) {
 	if (factory_test()) {
 		return 0;
 	}
-	else {
-		monitor_temperature();
-	}
+	eth_init();
+	cloud_service_init();
+	monitor_temperature();
 }
 

@@ -105,10 +105,6 @@ void *curl_thread(void *arg) {
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NULL); // 设置一个用于处理响应数据的回调函数，这里暂时设为NULL
 
             /* Perform the request, res will get the return code */
-            while (is_connected(msg.data)<0) {
-                printf("ERROR : ethernet disconnected\n");
-                sleep(1);
-            }
             res = curl_easy_perform(curl);
             /* Check for errors */
             if(res != CURLE_OK) {
@@ -117,6 +113,11 @@ void *curl_thread(void *arg) {
                 if (curl)
                     curl_easy_cleanup(curl);
                 curl = NULL;
+                // Check internet service alive
+                while (is_connected() != 1) {
+                    printf("ERROR : ethernet disconnected\n");
+                    sleep(5);
+                }
             }
             free(out);
             if (headers)

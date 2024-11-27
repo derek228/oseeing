@@ -1,3 +1,21 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/types.h>
+#include <net/if.h>
+#include <stdint.h>
+#include <curl/curl.h>
+#include "cloud-service.h"
+#include "ini-parse.h"
+#include "rs485.h"
+#include "cJSON.h"
+#include "ethernet.h"
+#include "curl_thread.h"
+#include "mi48.h"
 
 enum {
 	IGREENT_REGISTERING = 0,
@@ -22,6 +40,8 @@ struct memory {
 };
 struct memory chunk = {0};
 uint8_t register_status=IGREENT_REGISTERING;
+uint8_t curl_running = 0;
+pthread_t igreent_register_tid;
 
 static int cJSONParserID(const char * const response) {
 	cJSON *res = NULL;
@@ -182,37 +202,75 @@ static int simple_data_post(char *data) {
 	return 0;
 }
 
+static int igreent_register_thread() {
+	size_t len;
+    while (register_status != IGREENT_REGISTER_SUCCESS) {
+		printf("Waitting igreent cloud registering...\n");
+        if (is_connected() != 1) {
+			printf("Connect failure...\n");
+			sleep(3);
+			continue;
+		}
+    	strcat(igreent_ir_gateway_url_prefix, eth_get_mac());
+    	len=strlen(igreent_ir_gateway_url_prefix);
+    	igreent_ir_gateway_url_prefix[len]='\0';
+    	printf("URL = %s len=%d\n", igreent_ir_gateway_url_prefix,len);
+    	if (http_exec_q_ir_gateway()<0) {
+            printf("IGREENT cloud service register failure...\n");
+            register_status = IGREENT_REGISTER_FAIL;
+        }
+		else {
+            printf("IGREENT cloud service register success !!!\n");
+            register_status = IGREENT_REGISTER_SUCCESS;
+        }
+        sleep(1);
+    }
+}
+
+static int igreent_service_init() {
+    if (pthread_create(&igreent_register_tid, NULL, igreent_register_thread, NULL) != 0) {
+        perror("igreent service pthread_create\n");
+        return -1;
+    }
+	/*
+    if (pthread_join(igreent_register_thread, NULL) != 0) {
+        perror("igreent service join failed...\n");
+        return -1;
+    }
+	*/
+    return 0;
+
+}
+
+static int is_cloud_service_ready() {
+    if (register_status != IGREENT_REGISTER_SUCCESS)
+        return -1;
+    if (curl_running == 0) 
+        return -1;
+    return 0;
+}
 
 int cloud_service_init()
 {
-	printf("Igreent cloud service initial\n");
-	size_t len;
-	int ret;
-	strcat(igreent_ir_gateway_url_prefix, eth_get_mac());
-	len=strlen(igreent_ir_gateway_url_prefix);
-	igreent_ir_gateway_url_prefix[len]='\0';
-	printf("URL = %s len=%d\n", igreent_ir_gateway_url_prefix,len);
-	if (http_exec_q_ir_gateway()<0)
-		return -1;
-	#if 0
-	while (register_status != IGREENT_REGISTER_SUCCESS) {
-		printf("Wait iGreent cloud register device ID\n");
-		sleep(1);
-		http_exec_q_ir_gateway();
-	}
-	#endif
-	while (curl_thread_create()<0) {
-		printf("ERROR : curl therad create failed\n");
-		sleep(1);
-	}
+	//int ret;
+	printf("Cloud service initial\n");
+    if (igreent_service_init() < 0) {
+        printf("ERROR : Create igreent_service_init failure...\n");
+        return -1;
+    }
+    if (curl_thread_create() < 0) {
+        printf("ERROR : curl therad create failed\n");
+        return -1;
+    }
+    else 
+        curl_running = 1;
 	return 0;	
 }
 
 void run_cloud_service() {
-	if (register_status == IGREENT_REGISTER_FAIL) {
-		printf("Try to register iGreent service\n");
-		if (http_exec_q_ir_gateway()<0)
-			return;
+	if (is_cloud_service_ready() < 0) {
+		printf("ERROR : Cloud service not ready...\n");
+		return;
 	}
 	switch (get_ini_post_type()) {
 	case POST_FULL_DATA:
