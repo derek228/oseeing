@@ -17,8 +17,9 @@
 #include "alarm.h"
 #include "ethernet.h"
 #include "mi48.h"
+#include "utils.h"
+#define FW_VERSION	"V1.00.05"
 
-#define FW_VERSION	"1.00.05"
 static void parse_opts(int argc, char *argv[])
 {
 	char *macno;
@@ -82,6 +83,7 @@ int main(int argc, char *argv[]) {
 	if (factory_test()) {
 		return 0;
 	}
+	write_char_to_file("/version",FW_VERSION, strlen(FW_VERSION));
 	eth_init();
 	cloud_service_init();
 	monitor_temperature();
